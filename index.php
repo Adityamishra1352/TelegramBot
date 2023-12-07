@@ -30,16 +30,31 @@ while (true) {
 
     foreach ($updates['result'] as $update) {
         $chatID = $update['message']['chat']['id'];
+
         if (isset($update['message']['photo'])) {
             $photo = end($update['message']['photo']);
             $photoID = $photo['file_id'];
-            $fileInfo = apiRequest('getFile', ['file_id' => $photoID]);
-            $filePath = $fileInfo['result']['file_path'];
-            $photoLink = 'https://api.telegram.org/file/bot' . $botToken . '/' . $filePath;
-            apiRequest('sendMessage', [
+            $loadingMessageID = apiRequest('sendMessage', [
                 'chat_id' => $chatID,
-                'text' => 'Photo link: ' . $photoLink,
-            ]);
+                'text' => 'Generating photo link. Please wait...',
+            ])['result']['message_id'];
+            $fileInfo = apiRequest('getFile', ['file_id' => $photoID]);
+
+            if ($fileInfo['ok']) {
+                $filePath = $fileInfo['result']['file_path'];
+                $photoLink = 'https://api.telegram.org/file/bot' . $botToken . '/' . $filePath;
+                apiRequest('editMessageText', [
+                    'chat_id' => $chatID,
+                    'message_id' => $loadingMessageID,
+                    'text' => 'Photo link: ' . $photoLink,
+                ]);
+            } else {
+                apiRequest('editMessageText', [
+                    'chat_id' => $chatID,
+                    'message_id' => $loadingMessageID,
+                    'text' => 'Error generating photo link.',
+                ]);
+            }
         } else {
             $messageText = $update['message']['text'];
 
@@ -60,3 +75,4 @@ while (true) {
 
     sleep(1);
 }
+?>
