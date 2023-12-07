@@ -1,5 +1,5 @@
 <?php
-$botToken = '6560073983:AAHNyS5KXU85h_F9guWKi-QgcmeYwQHL0Z4';
+$botToken = 'Your bot token';
 $apiUrl = 'https://api.telegram.org/bot' . $botToken;
 
 function apiRequest($method, $params)
