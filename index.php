@@ -1,5 +1,5 @@
 <?php
-$botToken = '6560073983:AAHNyS5KXU85h_F9guWKi-QgcmeYwQHL0Z4';
+$botToken = 'YOUR_BOT_TOKEN';
 $apiUrl = 'https://api.telegram.org/bot' . $botToken;
 
 function apiRequest($method, $params)
@@ -30,36 +30,24 @@ while (true) {
 
     foreach ($updates['result'] as $update) {
         $chatID = $update['message']['chat']['id'];
+        echo var_dump($update['message']);
 
         if (isset($update['message']['photo'])) {
+            // Handle photo
             $photo = end($update['message']['photo']);
-            $photoID = $photo['file_id'];
-            $loadingMessageID = apiRequest('sendMessage', [
-                'chat_id' => $chatID,
-                'text' => 'Generating photo link. Please wait...',
-            ])['result']['message_id'];
-            $fileInfo = apiRequest('getFile', ['file_id' => $photoID]);
-
-            if ($fileInfo['ok']) {
-                $filePath = $fileInfo['result']['file_path'];
-                $photoLink = 'https://api.telegram.org/file/bot' . $botToken . '/' . $filePath;
-                apiRequest('editMessageText', [
-                    'chat_id' => $chatID,
-                    'message_id' => $loadingMessageID,
-                    'text' => 'Photo link: ' . $photoLink,
-                ]);
-            } else {
-                apiRequest('editMessageText', [
-                    'chat_id' => $chatID,
-                    'message_id' => $loadingMessageID,
-                    'text' => 'Error generating photo link.',
-                ]);
-            }
+            $fileID = $photo['file_id'];
+            processMedia($chatID, $fileID, 'photo');
+        } elseif (isset($update['message']['video'])) {
+            // Handle video
+            $video = $update['message']['video'];
+            $fileID = $video['file_id'];
+            processMedia($chatID, $fileID, 'video');
         } else {
+            // Handle text messages
             $messageText = $update['message']['text'];
 
             if ($messageText == '/start') {
-                $response = 'Hello! This is your Telegram bot.';
+                $response = 'Hello! Welcome to Media Bot. Upload an image or video to check it out';
             } else {
                 $response = $messageText;
             }
@@ -74,5 +62,31 @@ while (true) {
     }
 
     sleep(1);
+}
+
+function processMedia($chatID, $fileID, $mediaType)
+{
+    $loadingMessageID = apiRequest('sendMessage', [
+        'chat_id' => $chatID,
+        'text' => 'Generating ' . $mediaType . ' link. Please wait...',
+    ])['result']['message_id'];
+
+    $fileInfo = apiRequest('getFile', ['file_id' => $fileID]);
+
+    if ($fileInfo['ok']) {
+        $filePath = $fileInfo['result']['file_path'];
+        $mediaLink = 'https://api.telegram.org/file/bot' . $GLOBALS['botToken'] . '/' . $filePath;
+        apiRequest('editMessageText', [
+            'chat_id' => $chatID,
+            'message_id' => $loadingMessageID,
+            'text' => ucfirst($mediaType) . ' link: ' . $mediaLink,
+        ]);
+    } else {
+        apiRequest('editMessageText', [
+            'chat_id' => $chatID,
+            'message_id' => $loadingMessageID,
+            'text' => 'Error generating ' . $mediaType . ' link.',
+        ]);
+    }
 }
 ?>
